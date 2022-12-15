@@ -2,7 +2,6 @@ from math import inf
 import os
 import random
 import cv2
-from matplotlib import pyplot as plt
 import numpy as np
 import torch
 from sklearn.cluster import KMeans
@@ -11,13 +10,8 @@ from tqdm import tqdm
 # 获取图像sift特征描述子
 def get_sift_dec(img:np.ndarray):
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    sift = cv2.SIFT_create(nfeatures=1000)
+    sift = cv2.SIFT_create(nfeatures=50)
     key_points, dec = sift.detectAndCompute(gray, None)
-
-    # 展示sift特征点
-    # cv2.drawKeypoints(gray, key_point, img)
-    # plt.imshow(img)
-    # plt.show()
     return dec
 
 # 获取所有的特征向量列表
@@ -30,6 +24,7 @@ def get_dec_list(data):
             dec_list = item[0]
     return dec_list
 
+# 获取图像数据
 def get_data(path):
     data = []
     for index, dir in enumerate(os.listdir(path)):
@@ -54,12 +49,14 @@ def get_hist_list(kmeans, dec_centers, data):
         hist_list_with_label.append([get_dec_hist(kmeans, dec_centers, sift_dec), label])
     return hist_list_with_label
 
+# 求距离
 def L_norm(A, B, way=2):
     ans = 0
     for i in range(len(A)):
         ans += abs(A[i] - B[i]) ** way
     return ans ** (1 / way)
 
+# 获取最近图像
 def choose_the_most_similar_image(dec_hist, hist_list_with_label):
     final_dist = inf
     final_label = -1
@@ -70,7 +67,6 @@ def choose_the_most_similar_image(dec_hist, hist_list_with_label):
             final_label = label
     return final_label
 
-
 if __name__ == '__main__':
     dataset_path = './datasets'
     random.seed(0)
@@ -79,7 +75,7 @@ if __name__ == '__main__':
     train_data, test_data = torch.utils.data.random_split(data, [len(data)-10, 10], generator=torch.Generator().manual_seed(0))
     
     train_dec_list = get_dec_list(train_data)
-    kmeans = KMeans(n_clusters=1000)
+    kmeans = KMeans(n_clusters=100)
     train_sift_dec_pred = kmeans.fit_predict(train_dec_list)
     sift_dec_centers = kmeans.cluster_centers_
     
@@ -90,8 +86,8 @@ if __name__ == '__main__':
     label_truth = []
     for item in test_dec_hist_list:
         predict.append(choose_the_most_similar_image(item[0], train_dec_hist_list))
-        label_truth.append(item[0])
+        label_truth.append(item[1])
+
     print(predict)
     print(label_truth)
-
     
